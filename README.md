@@ -19,7 +19,6 @@ dashboard-app/
 
 ### Backend (server)
 
-```bash
 cd server
 npm install
 npm run dev
