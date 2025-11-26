@@ -1,23 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import Widget from './Widget';
+import NewsWidget from './NewsWidget';
+import MarketsWidget from './MarketsWidget';
+import SportsWidget from './SportsWidget';
+import WeatherWidget from './WeatherWidget';
+import NewsConfig from './NewsConfig';
+import MarketsConfig from './MarketsConfig';
+import SportsConfig from './SportsConfig';
+import WeatherConfig from './WeatherConfig';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [showWidgetModal, setShowWidgetModal] = useState(false);
-  const [widgets, setWidgets] = useState([]);
+  const [displayedWidgetConfig, setDisplayedWidgetConfig] = useState('');
+
+  const widgetRegistry = {
+    news: NewsWidget,
+    sports: SportsWidget,
+    weather: WeatherWidget,
+    markets: MarketsWidget,
+  };
 
   const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    if (token) {
-      axios.get('http://localhost:3001/api/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => setUser(res.data))
-      .catch(err => console.error(err));
+  const fetchUser = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch user");
+
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      console.error("fetchUser error:", err);
     }
+  };
+
+  useEffect(() => {
+    if (token) fetchUser();
   }, [token]);
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -25,14 +51,17 @@ export default function Dashboard() {
     window.location.href = '/login'; //force page reload and redirect to login
   };
 
-  const addWidget = (type) => {
-    setWidgets([...widgets, type]);
+  const addWidget = (widget) => {
+
   };
 
   const removeWidget = (id) => {
-    setWidgets(widgets.filter((w) => w.id !== id));
+
   };
 
+
+
+  if (!user) return <div>Loading...</div>;
 
   return (
     <div className="min-h-screen bg-green-100 p-6 flex flex-col items-center">
@@ -53,36 +82,145 @@ export default function Dashboard() {
       </header>
 
       {/*widget area*/}
-        <main className="relative w-full max-w-6xl h-156 bg-blue-50 rounded-xl shadow-md border-2 border-blue-300 flex flex-wrap items-start justify-start">
-            {widgets.map((type, index) => (
-              <Widget key={index} type={type} />
-            ))}
-            <button
-                onClick={() => setShowWidgetModal(true)}
-                className="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-                Add Widget
-            </button>
-        </main>
+      <main className="relative w-full max-w-8xl h-180 bg-blue-50 rounded-xl shadow-md border-2 border-blue-300 flex flex-wrap items-start justify-start">
+        {user.widgets.map((widget) => {
+          const WidgetComponent = widgetRegistry[widget.type];
+          if (!WidgetComponent) return null; //unknown type
+
+          return (
+            <div key={widget.id} style={widget.layout}>
+              <WidgetComponent {...widget.props} />
+            </div>
+          );
+        })}
+        <button
+          onClick={() => setShowWidgetModal(true)}
+          className="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-400 text-white font-semibold px-4 py-2 rounded-lg transition-colors duration-200"
+        >
+          Add Widget
+        </button>
+      </main>
 
       {/*widget type selection modal*/}
       {showWidgetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-96">
-            <h2 className="text-2xl font-bold mb-4">Select Widget Type</h2>
-            <div className="flex flex-col space-y-2">
-              <button className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg" onClick={() => {addWidget('sports'); setShowWidgetModal(false)}}>Sports</button>
-              <button className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg">Weather</button>
-              <button className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg">News</button>
-              <button
-                onClick={() => setShowWidgetModal(false)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg">
-                    Back
+        displayedWidgetConfig ? (
+          <div>
+            {displayedWidgetConfig === "sports" && (
+              <SportsConfig
+                onSave={async ({ league, team }) => {
+                  try {
+                    const res = await fetch("http://localhost:3001/api/widgets", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      },
+                      body: JSON.stringify({
+                        widget_type: "sports",
+                        props: { league, team },
+                        pos_x: 0,
+                        pos_y: 0,
+                        width: 4,
+                        height: 3,
+                      }),
+                    });
+
+                    if (!res.ok) throw new Error("Widget save failed");
+
+                    await fetchUser(); //refresh widgets
+                    setShowWidgetModal(false);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                onCancel={() => setDisplayedWidgetConfig()}
+              />
+            )}
+
+            {displayedWidgetConfig === "weather" && (
+              <WeatherConfig
+                onSave={async ({ city }) => {
+                  try {
+                    const res = await fetch("http://localhost:3001/api/widgets", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      },
+                      body: JSON.stringify({
+                        widget_type: "weather",
+                        props: { city },
+                        pos_x: 0,
+                        pos_y: 0,
+                        width: 4,
+                        height: 3,
+                      }),
+                    });
+
+                    if (!res.ok) throw new Error("Widget save failed");
+
+                    await fetchUser(); //refresh widgets
+                    setShowWidgetModal(false);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                onCancel={() => setDisplayedWidgetConfig()}
+              />
+            )}
+            {displayedWidgetConfig === "news" && (
+              <NewsConfig />
+            )}
+            {displayedWidgetConfig === "markets" && (
+              <MarketsConfig />
+            )}
+          </div>
+        ) : (
+          //config type selection
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white p-6 rounded-xl shadow-lg w-96">
+              <h2 className="text-2xl font-bold mb-4">Select Widget Type</h2>
+              <div className="flex flex-col space-y-2">
+                <button
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg"
+                  onClick={() => { setDisplayedWidgetConfig('sports') }}
+                >
+                  Sports
                 </button>
+
+                <button
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg"
+                  onClick={() => { setDisplayedWidgetConfig('weather') }}
+                >
+                  Weather
+                </button>
+
+                <button
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg"
+                  onClick={() => { setDisplayedWidgetConfig('news') }}
+                >
+                  News
+                </button>
+
+                <button
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg"
+                  onClick={() => { setDisplayedWidgetConfig('markets') }}
+                >
+                  Markets
+                </button>
+
+                <button
+                  onClick={() => setShowWidgetModal(false)}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-lg"
+                >
+                  Back
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
+
     </div>
   );
 }

@@ -122,17 +122,100 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 });
 
 //get current user info
-app.get('/api/me', authenticateToken, async (req, res) => { //protected route (authenticateToken() runs prior to try block)
+app.get('/api/me', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.user;
-    const { rows } = await pool.query('SELECT first_name, last_name, email FROM users WHERE id = $1', [id]);
-    if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
-    return res.json(rows[0]);
+    const userId = req.user.id;
+
+    //get user profile
+    const userResult = await pool.query(
+      'SELECT id, first_name, last_name, email FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    //get widgets for user
+    const widgetResult = await pool.query(
+      `SELECT id, widget_type, props, pos_x, pos_y, width, height
+       FROM user_widgets
+       WHERE user_id = $1
+       ORDER BY id ASC`,
+      [userId]
+    );
+
+    //shape widgets for frontend
+    const widgets = widgetResult.rows.map(row => ({
+      id: row.id,
+      type: row.widget_type,
+      props: row.props,
+      layout: {
+        x: row.pos_x,
+        y: row.pos_y,
+        w: row.width,
+        h: row.height,
+      },
+    }));
+
+    return res.json({
+      ...user,
+      widgets,
+    });
+
   } catch (err) {
-    console.error('Fetch user error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error("Fetch user error:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+
+
+app.post("/api/widgets", authenticateToken, async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const {
+      widget_type,
+      props,
+      pos_x = 0,
+      pos_y = 0,
+      width = 4,
+      height = 3,
+    } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO user_widgets
+       (user_id, widget_type, props, pos_x, pos_y, width, height)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [user_id, widget_type, props, pos_x, pos_y, width, height]
+    );
+
+    const row = result.rows[0];
+
+    //shape to match frontend
+    const savedWidget = {
+      id: row.id,
+      type: row.widget_type,
+      props: row.props,
+      layout: {
+        x: row.pos_x,
+        y: row.pos_y,
+        w: row.width,
+        h: row.height,
+      },
+    };
+
+    res.json(savedWidget);
+  } catch (err) {
+    console.error("Create widget error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 
 //start server
 const PORT = process.env.PORT || 3001;
