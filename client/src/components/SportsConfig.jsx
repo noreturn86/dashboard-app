@@ -1,39 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchNhlTeams } from "../features/nhlTeamsSlice";
 
 export default function SportsConfig({ onSave, onCancel }) {
     const [league, setLeague] = useState("NHL");
     const [team, setTeam] = useState("");
-    const [loading, setLoading] = useState(false);
+    const { nhlTeams, loading, error } = useSelector(state => state.nhlTeams);
 
-    const NHL_TEAMS = [
-        "Avalanche", "Blackhawks", "Blue Jackets", "Blues", "Bruins", "Canadiens",
-        "Canucks", "Capitals", "Devils", "Ducks", "Flames", "Flyers", "Golden Knights",
-        "Hurricanes", "Islanders", "Jets", "Kings", "Kraken", "Lightning", "Mammoth",
-        "Maple Leafs", "Oilers", "Panthers", "Penguins", "Predators", "Rangers",
-        "Red Wings", "Sabres", "Senators", "Sharks", "Stars", "Wild"
-    ].sort();
+    const dispatch = useDispatch();
 
-    const NBA_TEAMS = [
-        "76ers", "Bucks", "Bulls", "Cavaliers", "Celtics", "Clippers", "Grizzlies",
-        "Hawks", "Heat", "Hornets", "Jazz", "Kings", "Knicks", "Lakers", "Magic",
-        "Mavericks", "Nets", "Nuggets", "Pacers", "Pelicans", "Pistons", "Raptors",
-        "Rockets", "Spurs", "Suns", "Thunder", "Timberwolves", "Trail Blazers",
-        "Warriors", "Wizards"
-    ].sort();
+    useEffect(() => {
+        dispatch(fetchNhlTeams());
+    }, [dispatch]);
 
-    const teams = league === "NHL" ? NHL_TEAMS : NBA_TEAMS;
+
+    if (loading) return <p>Loading…</p>;
+    if (error) return <p>Error: {error}</p>;
+
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!team) return;
-
         onSave({ league, team });
     };
 
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-xl shadow-lg w-96">
+            <div className="bg-white p-6 rounded-xl shadow-lg w-2/3">
                 <h2 className="text-2xl font-bold mb-4 text-center">Sports Widget Settings</h2>
 
                 <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
@@ -51,33 +45,27 @@ export default function SportsConfig({ onSave, onCancel }) {
                             NHL
                         </button>
 
-                        <button
-                            type="button"
-                            onClick={() => setLeague("NBA")}
-                            className={`px-4 py-2 rounded-lg text-white ${league === "NBA"
-                                ? "bg-blue-600"
-                                : "bg-blue-300 hover:bg-blue-400"
-                                }`}
-                        >
-                            NBA
-                        </button>
+
                     </div>
 
                     {/* Team selection */}
-                    <div className="max-h-60 overflow-y-auto border p-2 rounded-lg">
-                        <div className="grid grid-cols-2 gap-2">
-                            {teams.map((t) => (
-                                <button
+                    <div className="max-h-100 overflow-y-auto border p-2 rounded-lg">
+                        <div className="grid grid-cols-4 gap-2">
+                            {nhlTeams.map((t) => (
+                                <div
                                     type="button"
-                                    key={t}
-                                    onClick={() => setTeam(t)}
-                                    className={`px-3 py-2 rounded-lg text-white ${team === t
+                                    key={t.abbrevName} // <-- unique key
+                                    onClick={() => setTeam(t.abbrevName)}
+                                    className={`flex items-center justify-between h-30 px-3 py-2 rounded-lg text-white ${team === t.abbrevName
                                         ? "bg-blue-600"
                                         : "bg-blue-300 hover:bg-blue-400"
                                         }`}
                                 >
-                                    {t}
-                                </button>
+                                    <h2 className="text-4xl">{t.commonName}</h2>
+                                    <div className="w-28 h-28">
+                                        <img className="w-full h-full" src={t.logo}></img>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>

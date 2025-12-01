@@ -57,6 +57,39 @@ function authenticateToken(req, res, next) {
   }
 }
 
+
+//////////////////////
+//HELPER FUNCTIONS////
+//////////////////////
+
+
+//return player stats for all player ids in the list
+async function getPlayerStats(listOfIds) {
+  try {
+    const statsList = await Promise.all(
+      listOfIds.map(async (id) => {
+        const res = await fetch(`https://api-web.nhle.com/v1/player/${id}/landing`);
+        if (!res.ok) {
+          console.error(`Failed to fetch player ${id}: ${res.status}`);
+          return null;
+        }
+        const data = await res.json();
+        return data;
+      })
+    );
+
+    return statsList.filter((s) => s !== null);
+  } catch (err) {
+    console.error("Error fetching player stats:", err);
+    throw err;
+  }
+}
+
+
+
+
+
+
 ///////
 //ROUTES
 ///////
@@ -215,6 +248,115 @@ app.post("/api/widgets", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+
+app.get("/api/weather", authenticateToken, async (req, res) => {
+  try {
+    const city = req.query.city;
+    if (!city) return res.status(400).json({ message: "City is required" });
+
+    const apiKey = process.env.WEATHER_API_KEY;
+
+    const fetchRes = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`
+    );
+
+    if (!fetchRes.ok) {
+      return res.status(fetchRes.status).json({ message: "Weather API error" });
+    }
+
+    const data = await fetchRes.json();
+    res.json(data);
+
+  } catch (err) {
+    ku
+    kconsole.error("Weather fetch error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+app.get("/api/nhl/teams", authenticateToken, async (req, res) => {
+  try {
+    const nhlRes = await fetch("https://api-web.nhle.com/v1/standings/now");
+
+    if (!nhlRes.ok) {
+      return res
+        .status(nhlRes.status)
+        .json({ message: "Failed to fetch NHL standings" });
+    }
+
+    const data = await nhlRes.json();
+
+    //data.standings is an array of teams in order of league standings
+    const teamsRaw = data.standings;
+
+    const nhlTeams = teamsRaw.map(t => ({
+      fullName: t.teamName.default,
+      commonName: t.teamCommonName.default,
+      abbrevName: t.teamAbbrev.default,
+      logo: t.teamLogo,
+      wins: t.wins,
+      losses: t.losses,
+      otLosses: t.otLosses,
+      points: t.points,
+      pointsPercentage: t.pointPctg,
+      divRank: t.divisionSequence,
+      confRank: t.conferenceSequence,
+      leagueRank: t.leagueSequence,
+    }));
+
+    res.json({ nhlTeams });
+
+  } catch (err) {
+    console.error("NHL standings fetch error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+app.get("/api/nhl/roster/:teamCode", authenticateToken, async (req, res) => {
+  const teamCode = req.params.teamCode;
+
+  try {
+    const teamRes = await fetch(`https://api-web.nhle.com/v1/roster/${teamCode}/current`);
+    if (!teamRes.ok) {
+      return res.status(teamRes.status).json({ message: "Failed to fetch NHL roster" });
+    }
+
+    const data = await teamRes.json();
+    const rosteredPlayers = [...data.forwards, ...data.defensemen, ...data.goalies];
+    const allIds = rosteredPlayers.map((p) => p.id);
+
+    //fetch detailed stats for all players
+    const playersRaw = await getPlayerStats(allIds);
+
+    //map to simplified structure
+    const players = playersRaw.map((p) => {
+      const reg = p.featuredStats?.regularSeason?.subSeason ?? {};
+
+      return {
+        firstName: p.firstName?.default ?? "",
+        lastName: p.lastName?.default ?? "",
+        number: p.sweaterNumber ?? null,
+        position: p.position ?? "",
+        gamesPlayed: reg.gamesPlayed ?? 0,
+        goals: reg.goals ?? 0,
+        assists: reg.assists ?? 0,
+        points: reg.points ?? 0,
+        headshot: p.headshot ?? null,
+      };
+    });
+
+    res.json({ players });
+  } catch (err) {
+    console.error("NHL roster fetch error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+
 
 
 //start server

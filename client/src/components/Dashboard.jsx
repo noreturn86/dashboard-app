@@ -8,6 +8,7 @@ import NewsConfig from './NewsConfig';
 import MarketsConfig from './MarketsConfig';
 import SportsConfig from './SportsConfig';
 import WeatherConfig from './WeatherConfig';
+import logoIcon from "../assets/logo2.png";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -66,11 +67,14 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-green-100 p-6 flex flex-col items-center">
       {/* Header */}
-      <header className="mb-6 w-full max-w-6xl flex justify-between items-center">
-        <p className="text-3xl font-bold text-blue-700 text-center">
-          Dashboard
-        </p>
-        <p className="text-3xl font-bold text-blue-700 text-center">
+      <header className="mb-6 w-full max-w-8xl flex justify-between items-center">
+        <div className='flex item-center gap-2'>
+          <img src={logoIcon} alt="Dashboard Icon" className="w-12 h-12 mx-auto rounded-full" />
+          <p className="text-5xl font-bold text-blue-700 text-center">
+            DashBoard!
+          </p>
+        </div>
+        <p className="text-5xl font-bold text-blue-700 text-center">
           {user ? `${user.first_name} ${user.last_name}` : ''}
         </p>
         <button
@@ -168,11 +172,69 @@ export default function Dashboard() {
                 onCancel={() => setDisplayedWidgetConfig()}
               />
             )}
+
             {displayedWidgetConfig === "news" && (
-              <NewsConfig />
+              <NewsConfig
+                onSave={async ({ category, region }) => {
+                  try {
+                    const res = await fetch("http://localhost:3001/api/widgets", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      },
+                      body: JSON.stringify({
+                        widget_type: "news",
+                        props: { category, region },
+                        pos_x: 0,
+                        pos_y: 0,
+                        width: 4,
+                        height: 3,
+                      }),
+                    });
+
+                    if (!res.ok) throw new Error("Widget save failed");
+
+                    await fetchUser(); //refresh widgets
+                    setShowWidgetModal(false);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                onCancel={() => setDisplayedWidgetConfig()}
+              />
             )}
+
             {displayedWidgetConfig === "markets" && (
-              <MarketsConfig />
+              <MarketsConfig
+                onSave={async ({ market }) => {
+                  try {
+                    const res = await fetch("http://localhost:3001/api/widgets", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("token")}`,
+                      },
+                      body: JSON.stringify({
+                        widget_type: "markets",
+                        props: { market },
+                        pos_x: 0,
+                        pos_y: 0,
+                        width: 4,
+                        height: 3,
+                      }),
+                    });
+
+                    if (!res.ok) throw new Error("Widget save failed");
+
+                    await fetchUser(); //refresh widgets
+                    setShowWidgetModal(false);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                onCancel={() => setDisplayedWidgetConfig()}
+              />
             )}
           </div>
         ) : (
