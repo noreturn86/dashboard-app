@@ -137,7 +137,7 @@ export default function Dashboard() {
                     console.error(err);
                   }
                 }}
-                onCancel={() => setDisplayedWidgetConfig()}
+                onCancel={() => setDisplayedWidgetConfig('')}
               />
             )}
 
@@ -169,7 +169,7 @@ export default function Dashboard() {
                     console.error(err);
                   }
                 }}
-                onCancel={() => setDisplayedWidgetConfig()}
+                onCancel={() => setDisplayedWidgetConfig('')}
               />
             )}
 
@@ -201,7 +201,7 @@ export default function Dashboard() {
                     console.error(err);
                   }
                 }}
-                onCancel={() => setDisplayedWidgetConfig()}
+                onCancel={() => setDisplayedWidgetConfig('')}
               />
             )}
 
@@ -233,7 +233,7 @@ export default function Dashboard() {
                     console.error(err);
                   }
                 }}
-                onCancel={() => setDisplayedWidgetConfig()}
+                onCancel={() => setDisplayedWidgetConfig('')}
               />
             )}
           </div>

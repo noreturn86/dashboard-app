@@ -37,13 +37,13 @@ export default function SportsWidget({ league, team }) { //team is a 3-letter te
     const teamRoster = rosters[team] || { forwards: [], defencemen: [], goalies: [] };
     const { forwards, defencemen, goalies } = teamRoster;
 
-    const topPointsForwards = [...forwards].sort((a, b) => b.points - a.points).slice(0, 4);
-    const topPointsDefencemen = [...defencemen].sort((a, b) => b.points - a.points).slice(0, 4);
+    const topPointsForwards = [...forwards].sort((a, b) => b.points - a.points);
+    const topPointsDefencemen = [...defencemen].sort((a, b) => b.points - a.points);
 
 
 
     return (
-        <div className="flex border p-3 rounded-xl bg-blue-50 w-216 h-120 shadow-md gap-6">
+        <div className="flex border p-3 rounded-xl bg-blue-50 w-180 h-105 shadow-md gap-6">
             {/* LEFT PANEL */}
             <div className="flex flex-col items-center justify-between w-1/3 h-full">
                 <h2 className="text-xl font-bold">{league}</h2>
@@ -58,11 +58,13 @@ export default function SportsWidget({ league, team }) { //team is a 3-letter te
                     <h2 className="text-2xl font-semibold">{selectedTeam.commonName}</h2>
 
                     <p className="text-lg">
-                        {selectedTeam.wins}-{selectedTeam.losses}-{selectedTeam.otLosses}{" "}
+                        {selectedTeam.wins} - {selectedTeam.losses} - {selectedTeam.otLosses}{" "}
                         <strong>{selectedTeam.points} Pts</strong> (
                         {(selectedTeam.pointsPercentage * 100).toFixed(1)}%)
                     </p>
                 </div>
+
+                <p className="text-lg">Last 10 games: {selectedTeam.last10Wins} - {selectedTeam.last10Losses} - {selectedTeam.last10OtLosses}</p>
 
                 <div className="flex gap-6 mt-2">
                     <div className="flex flex-col items-center">
@@ -84,8 +86,8 @@ export default function SportsWidget({ league, team }) { //team is a 3-letter te
 
             {/* RIGHT PANEL */}
             <div className="flex flex-col w-2/3 h-full border rounded-xl p-1 shadow-sm bg-white">
-
-                <div className="w-full flex items-center justify-evenly">
+                {/* Headers */}
+                <div className="w-full flex items-center justify-evenly flex-none">
                     <div className="w-1/3 text-center py-1 border rounded-t-xl bg-gray-100 font-medium">
                         Forwards
                     </div>
@@ -97,21 +99,28 @@ export default function SportsWidget({ league, team }) { //team is a 3-letter te
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end border w-full">
+                <div className="flex items-center justify-end border w-full flex-none">
                     <p className="mx-4 font-semibold">G</p>
                     <p className="mx-4 font-semibold">A</p>
                     <p className="mx-4 font-semibold">P</p>
                 </div>
 
-                <div className="flex flex-col items-center h-4/5">
+                {/* Scrollable player list */}
+                <div className="flex flex-col flex-1 overflow-y-auto">
                     {topPointsForwards.map((forward, index) => (
-                        <div key={index} className="flex items-center gap-1 h-1/4 border">
-                            <div className="flex-2 border-2 rounded-full">
-                                <img src={forward.headshot} className="w-full h-full"></img>
+                        <div key={index} className="flex items-center gap-1 h-20 border p-1 flex-none overflow-hidden">
+                            <div className="h-full border-2 rounded-full overflow-hidden scale-132 mr-4">
+                                <img
+                                    src={forward.headshot}
+                                    className="w-full h-full object-cover scale-120"
+                                    alt={`${forward.firstName} ${forward.lastName}`}
+                                />
                             </div>
-                            <p className="flex-1 font-bold text-2xl">#{forward.number}</p>
-                            <p className="flex-5 font-semibold text-2xl pl-2">{forward.firstName[0]}. {forward.lastName}</p>
-                            <div className="flex flex-2 items-center justify-end w-full">
+                            <p className="font-bold text-2xl">#{forward.number}</p>
+                            <p className="font-semibold text-2xl pl-2">
+                                {forward.firstName[0]}. {forward.lastName}
+                            </p>
+                            <div className="flex flex-1 items-center justify-end w-full">
                                 <p className="mx-4 font-semibold text-2xl">{forward.goals}</p>
                                 <p className="mx-4 font-semibold text-2xl">{forward.assists}</p>
                                 <p className="mx-4 font-semibold text-2xl">{forward.points}</p>
@@ -120,6 +129,8 @@ export default function SportsWidget({ league, team }) { //team is a 3-letter te
                     ))}
                 </div>
             </div>
+
+
         </div>
 
     );

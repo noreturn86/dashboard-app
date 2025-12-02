@@ -304,6 +304,9 @@ app.get("/api/nhl/teams", authenticateToken, async (req, res) => {
       divRank: t.divisionSequence,
       confRank: t.conferenceSequence,
       leagueRank: t.leagueSequence,
+      last10Wins: t.l10Wins,
+      last10Losses: t.l10Losses,
+      last10OtLosses: t.l10OtLosses,
     }));
 
     res.json({ nhlTeams });
@@ -330,6 +333,7 @@ app.get("/api/nhl/roster/:teamCode", authenticateToken, async (req, res) => {
 
     //fetch detailed stats for all players
     const playersRaw = await getPlayerStats(allIds);
+    console.log(players.length);
 
     //map to simplified structure
     const players = playersRaw.map((p) => {
@@ -356,7 +360,161 @@ app.get("/api/nhl/roster/:teamCode", authenticateToken, async (req, res) => {
 });
 
 
+//current stock prices
+app.get("/api/stock/live/:symbol", async (req, res) => {
+  const { symbol } = req.params;
+  const API_KEY = process.env.ALPHA_VANTAGE_KEY;
 
+  try {
+    const response = await fetch(
+      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`
+    );
+
+    const data = await response.json();
+
+    if (data["Global Quote"]) {
+      return res.json(data["Global Quote"]);
+    }
+
+    return res.status(400).json({ error: data["Note"] || "No data available" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+//daily stock prices
+app.get("/api/stock/daily/:symbol", async (req, res) => {
+  const { symbol } = req.params;
+  const API_KEY = process.env.ALPHA_VANTAGE_KEY;
+
+  try {
+    const response = await fetch(
+      `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${API_KEY}`
+    );
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch stock data" });
+    }
+
+    const data = await response.json();
+
+    if (data["Error Message"]) {
+      return res.status(400).json({ error: data["Error Message"] });
+    }
+
+    if (data["Note"]) {
+      console.warn("Alpha Vantage API limit reached:", data["Note"]);
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+//weekly stock prices
+app.get("/api/stock/weekly/:symbol", async (req, res) => {
+  const { symbol } = req.params;
+  const API_KEY = process.env.ALPHA_VANTAGE_KEY;
+
+  try {
+    const response = await fetch(
+      `https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY&symbol=${symbol}&apikey=${API_KEY}`
+    );
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch weekly stock data" });
+    }
+
+    const data = await response.json();
+
+    if (data["Error Message"]) {
+      return res.status(400).json({ error: data["Error Message"] });
+    }
+
+    if (data["Note"]) {
+      console.warn("Alpha Vantage API limit reached:", data["Note"]);
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+//monthly stock prices
+app.get("/api/stock/monthly/:symbol", async (req, res) => {
+  const { symbol } = req.params;
+  const API_KEY = process.env.ALPHA_VANTAGE_KEY;
+
+  try {
+    const response = await fetch(
+      `https://www.alphavantage.co/query?function=TIME_SERIES_MONTHLY&symbol=${symbol}&apikey=${API_KEY}`
+    );
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch monthly stock data" });
+    }
+
+    const data = await response.json();
+
+    if (data["Error Message"]) {
+      return res.status(400).json({ error: data["Error Message"] });
+    }
+
+    if (data["Note"]) {
+      console.warn("Alpha Vantage API limit reached:", data["Note"]);
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get("/api/news", async (req, res) => {
+  const { q = "", region = "us", category = "" } = req.query; // optional query params
+  const API_KEY = process.env.NEWS_API_KEY;
+
+  try {
+    // Build query string
+    let url = `https://newsapi.org/v2/everything?apiKey=${API_KEY}&language=en&sortBy=publishedAt`;
+
+    if (q) url += `&q=${encodeURIComponent(q)}`;
+    if (category) url += `&q=${encodeURIComponent(category)}`; // can include category in query
+    if (region) url += `&domains=${getNewsDomainsForRegion(region)}`; // optional helper function
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return res.status(500).json({ error: "Failed to fetch news" });
+    }
+
+    const data = await response.json();
+
+    res.json(data);k
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Example helper to map regions to domains (optional)
+function getNewsDomainsForRegion(region) {
+  const domains = {
+    us: "cnn.com,bbc.com,nytimes.com",
+    ca: "cbc.ca,theglobeandmail.com",
+    uk: "bbc.co.uk,guardian.co.uk",
+    // add more regions if needed
+  };
+  return domains[region] || "";
+}
 
 
 //start server
